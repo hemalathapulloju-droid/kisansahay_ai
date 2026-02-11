@@ -1,2 +1,7 @@
 streamlit
 requests
+deep-translator
+google-generativeai
+SpeechRecognition
+gtts
+pillow
