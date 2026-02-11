@@ -1,7 +1,5 @@
 import streamlit as st
-import requests
 from datetime import datetime
-from deep_translator import GoogleTranslator
 
 # ================= PAGE CONFIG =================
 st.set_page_config(page_title="KisanSahay", layout="wide")
@@ -16,22 +14,22 @@ h1,h2,h3,h4,p,label {color:white !important;}
 
 # ================= SESSION =================
 if "logged_in" not in st.session_state:
-    st.session_state.logged_in=False
+    st.session_state.logged_in = False
 
 # ================= LOGIN =================
 def login():
     st.title("🌾 KisanSahay Farmer Login")
-
     name = st.text_input("Farmer Name")
     place = st.text_input("Village / City")
-    lang = st.selectbox("Language", ["English","Telugu","Hindi","Marathi","Tamil"])
 
     if st.button("Login"):
-        st.session_state.logged_in = True
-        st.session_state.name = name
-        st.session_state.place = place
-        st.session_state.language = lang
-        st.rerun()
+        if name and place:
+            st.session_state.logged_in = True
+            st.session_state.name = name
+            st.session_state.place = place
+            st.rerun()
+        else:
+            st.warning("Please enter name and place to continue.")
 
 # ================= LANGUAGE MAP =================
 lang_map = {
@@ -43,86 +41,86 @@ lang_map = {
 }
 
 # ================= SMART AI =================
-def smart_ai(q):
-    user_lang_code = lang_map.get(st.session_state.language, "en")
+def smart_ai(q, lang):
+    """
+    Generate AI answer in paragraph style, in the specified language.
+    """
+    query = q.lower()
 
-    # Translate user query to English for processing
-    try:
-        translated_query = GoogleTranslator(source='auto', target='en').translate(q)
-    except:
-        translated_query = q
-
-    query = translated_query.lower()
-
-    # Generate detailed paragraph-style response
+    # Base answer in English
     if "rice" in query:
-        ans = ("Rice farming involves several important steps to ensure a healthy crop yield. "
-               "First, prepare the nursery and sow seeds carefully. Maintain proper water levels "
-               "throughout the growing season. Apply nitrogen fertilizers judiciously, and regularly "
-               "monitor for pests and diseases to take timely action.")
+        ans = ("Rice farming involves several key steps to ensure a healthy crop yield. "
+               "Farmers should prepare the nursery, maintain proper water levels, "
+               "apply fertilizers carefully, and monitor for pests and diseases regularly.")
     elif "scheme" in query:
-        ans = ("There are various government schemes available to support farmers. "
-               "PM-Kisan provides financial assistance, PMFBY offers crop insurance, Kisan Credit Card "
-               "enables low-interest loans, Soil Health Card helps monitor soil quality, "
-               "and irrigation subsidies support efficient water management.")
+        ans = ("There are several government schemes to support farmers. "
+               "PM-Kisan provides financial assistance, PMFBY offers crop insurance, "
+               "Kisan Credit Card provides low-interest loans, Soil Health Card monitors soil quality, "
+               "and irrigation subsidies support efficient water usage.")
     elif "disease" in query:
-        ans = ("If your crops show signs of disease, you can use the AI-based disease detection "
-               "feature by uploading images of the affected plants. The system will diagnose "
-               "the issue and provide guidance on treatment measures, such as recommended pesticides, "
-               "sprays, or cultural practices to manage the disease effectively.")
+        ans = ("To detect and treat plant diseases, farmers can observe symptoms carefully "
+               "and follow preventive measures. For example, neem oil sprays, removing infected leaves, "
+               "and maintaining proper soil health can reduce crop loss.")
     else:
-        ans = ("Farmers should follow seasonal crop planning, regularly test soil quality, "
-               "apply a balanced mix of fertilizers, and continuously monitor crops for pests "
-               "and diseases. Combining these practices ensures sustainable and productive farming.")
+        ans = ("Farmers should follow seasonal crop planning, regularly test soil, "
+               "apply balanced fertilizers, and monitor crops for pests and diseases. "
+               "These practices ensure sustainable and productive farming.")
 
-    # Translate AI response to user's language
-    try:
-        final_response = GoogleTranslator(source='en', target=user_lang_code).translate(ans)
-    except:
-        final_response = ans
+    # Hardcoded translations
+    translations = {
+        "English": ans,
+        "Telugu": "ధాన్యం సాగులో మంచి దిగుబడి కోసం కొన్ని ముఖ్యమైన దశలు ఉన్నాయి. రైతులు నర్సరీని సిద్ధం చేయాలి, నీటి స్థాయిని సరిపడుగా ఉంచాలి, ఎరువులను జాగ్రత్తగా ఉపయోగించాలి, మరియు పురుగు మరియు రోగాలను రెగ్యులర్‌గా పరిశీలించాలి.",
+        "Hindi": "चावल की खेती में अच्छे उत्पादन के लिए कई महत्वपूर्ण कदम होते हैं। किसानों को नर्सरी तैयार करनी चाहिए, पानी का स्तर बनाए रखना चाहिए, उर्वरकों का सावधानीपूर्वक उपयोग करना चाहिए, और कीट और रोगों की नियमित निगरानी करनी चाहिए।",
+        "Marathi": "भात लागवडीत चांगल्या उत्पन्नासाठी काही महत्वाच्या पायऱ्या आहेत. शेतकऱ्यांनी नर्सरी तयार करावी, पाण्याची योग्य पातळी राखावी, खत काळजीपूर्वक वापरावे आणि कीटक व रोग यांचे नियमित निरीक्षण करावे.",
+        "Tamil": "அரிசி விவசாயத்தில் நல்ல அறுவடை பெற சில முக்கிய படிகள் உள்ளன. விவசாயிகள் நர்சரி தயார் செய்ய வேண்டும், நீர் நிலையை சரியாக பராமரிக்க வேண்டும், உரங்களை கவனமாக பயன்படுத்த வேண்டும் மற்றும் பூச்சிகள் மற்றும் நோய்களை முறையாக கண்காணிக்க வேண்டும்."
+    }
 
-    return final_response
+    return translations.get(lang, ans)
 
-# ================= WEATHER =================
+# ================= SIMULATED WEATHER =================
 def weather():
-    st.header("🌦 Weather Advisory")
-    key = st.secrets.get("WEATHER_KEY","")
-    if not key:
-        st.warning("Add WEATHER_KEY in secrets.")
-        return
-
+    st.header("🌦 Current Weather Advisory")
     city = st.session_state.place
-    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={key}&units=metric"
-    data = requests.get(url).json()
+    today = datetime.today().strftime("%d-%m-%Y")
 
-    if "main" in data:
-        temp = data['main']['temp']
-        humidity = data['main']['humidity']
-        desc = data['weather'][0]['description'].capitalize()
+    # Simulated weather data
+    temp = "32°C"
+    humidity = "60%"
+    condition = "Partly cloudy"
 
-        # Display as emphasized weather card
-        st.subheader(f"Current Weather in {city}")
-        st.write(f"**Temperature:** {temp} °C")
-        st.write(f"**Humidity:** {humidity} %")
-        st.write(f"**Condition:** {desc}")
+    # Display image based on condition
+    weather_images = {
+        "sunny": "https://images.unsplash.com/photo-1501973801540-537f08ccae7b",
+        "cloudy": "https://images.unsplash.com/photo-1529864724933-cb37c5da8f80",
+        "rainy": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d",
+        "storm": "https://images.unsplash.com/photo-1502920514313-52581002a659"
+    }
+
+    img_url = weather_images["cloudy"]  # Example: cloudy
+    st.image(img_url, width=400)
+    st.write(f"**City:** {city}")
+    st.write(f"**Date:** {today}")
+    st.write(f"**Temperature:** {temp}")
+    st.write(f"**Humidity:** {humidity}")
+    st.write(f"**Condition:** {condition}")
 
 # ================= NEWS =================
 def news():
     st.header("📰 Agriculture News India")
     today = datetime.today().strftime("%d-%m-%Y")
 
-    st.image("https://images.unsplash.com/photo-1598514982306-7a4cf2f4c43c",width=400)
-    st.write(today,"New fertilizer subsidy announced.")
-    st.link_button("Read More","https://www.thehindu.com")
+    st.image("https://images.unsplash.com/photo-1598514982306-7a4cf2f4c43c", width=400)
+    st.write(today, "New fertilizer subsidy announced.")
+    st.markdown("[Read More](https://www.thehindu.com)")
 
-    st.image("https://images.unsplash.com/photo-1500382017468-9049fed747ef",width=400)
-    st.write(today,"AI technology improving Indian farming.")
-    st.link_button("Read More","https://indianexpress.com")
+    st.image("https://images.unsplash.com/photo-1500382017468-9049fed747ef", width=400)
+    st.write(today, "AI technology improving Indian farming.")
+    st.markdown("[Read More](https://indianexpress.com)")
 
 # ================= SCHEMES =================
 def schemes():
     st.header("🏛 Government Schemes")
-    schemes_data=[
+    schemes_data = [
         ("PM-Kisan","Small farmers","₹6000 yearly","https://pmkisan.gov.in/"),
         ("PMFBY","Crop insurance","Protection against crop loss","https://pmfby.gov.in/"),
         ("Soil Health Card","All farmers","Free soil testing","https://soilhealth.dac.gov.in/"),
@@ -130,12 +128,11 @@ def schemes():
         ("PMKSY Irrigation","Irrigation farmers","Water subsidy","https://pmksy.gov.in/"),
         ("eNAM","All farmers","Online market access","https://www.enam.gov.in/")
     ]
-
     for s in schemes_data:
         st.subheader(s[0])
-        st.write("Eligibility:",s[1])
-        st.write("Benefit:",s[2])
-        st.link_button("Apply",s[3])
+        st.write("Eligibility:", s[1])
+        st.write("Benefit:", s[2])
+        st.markdown(f"[Apply]({s[3]})")
 
 # ================= DISEASE =================
 def disease():
@@ -148,17 +145,20 @@ def disease():
 # ================= AI CHAT =================
 def chatbot():
     st.header("🤖 Smart AI Assistant")
-    q = st.text_area("Ask farming question")
+    lang = st.selectbox("Select Language", ["English","Telugu","Hindi","Marathi","Tamil"])
+    question = st.text_area("Ask your farming question")
     if st.button("Submit Question"):
-        if q:
-            ans = smart_ai(q)
+        if question:
+            answer = smart_ai(question, lang)
             st.subheader("AI Response")
-            st.success(ans)
+            st.success(answer)
+        else:
+            st.warning("Please type a question.")
 
 # ================= DASHBOARD =================
 def dashboard():
     st.title(f"Welcome {st.session_state.name} 👋")
-    col1,col2,col3 = st.columns(3)
+    col1, col2, col3 = st.columns(3)
     if col1.button("🌱 Crop Advisory"):
         chatbot()
     if col2.button("🤖 AI Assistant"):
@@ -170,7 +170,8 @@ def dashboard():
 # ================= MAIN =================
 def main():
     page = st.sidebar.radio("Navigation",
-["🏠 Dashboard","🤖 AI Assistant","📸 Disease Detection","🏛 Government Schemes","🌦 Weather","ℹ️ About","📞 Contact"])
+        ["🏠 Dashboard","🤖 AI Assistant","📸 Disease Detection",
+         "🏛 Government Schemes","🌦 Weather","ℹ️ About","📞 Contact"])
 
     if page=="🏠 Dashboard":
         dashboard()
@@ -184,7 +185,9 @@ def main():
         weather()
     elif page=="ℹ️ About":
         st.write("""
-KisanSense is a multilingual agritech platform designed to empower farmers with AI-driven crop advisory, disease detection, weather updates, and information on government schemes.
+KisanSense is a multilingual agritech platform designed to empower farmers 
+with AI-driven crop advisory, disease detection, weather updates, 
+and information on government schemes.
 
 Creators:
 1. Hemalatha Pulloju
@@ -202,4 +205,5 @@ if not st.session_state.logged_in:
     login()
 else:
     main()
+
 
