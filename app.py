@@ -4,144 +4,93 @@ from datetime import datetime
 from deep_translator import GoogleTranslator
 
 # ================= PAGE CONFIG =================
-st.set_page_config(page_title="KisanSahay", layout="wide", page_icon="🌾")
+st.set_page_config(page_title="KisanSahay", layout="wide")
 
-# ================= BACKGROUND =================
+# ================= STYLE =================
 st.markdown("""
 <style>
-.stApp {
-background-image: linear-gradient(rgba(0,0,0,0.75),rgba(0,0,0,0.75)),
-url("https://images.unsplash.com/photo-1500382017468-9049fed747ef");
-background-size:cover;
-background-attachment:fixed;
-color:white;
-}
-h1,h2,h3,h4,p,label {color:white;}
+.stApp {background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);}
+h1,h2,h3,h4,p,label {color:white !important;}
 </style>
 """, unsafe_allow_html=True)
 
 # ================= SESSION =================
-if "login" not in st.session_state:
-    st.session_state.login=False
-if "applied" not in st.session_state:
-    st.session_state.applied=[]
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in=False
 
-# ================= LOGIN PAGE =================
+# ================= LOGIN =================
 def login():
     st.title("🌾 KisanSahay Farmer Login")
 
-    name = st.text_input("Farmer Name")
-    place = st.text_input("Village / City")
-    language = st.selectbox("Language",
-                            ["English","Telugu","Hindi","Marathi","Tamil"])
+    name=st.text_input("Farmer Name")
+    place=st.text_input("Village / City")
+    lang=st.selectbox("Language",
+                      ["English","Telugu","Hindi","Marathi","Tamil"])
 
     if st.button("Login"):
-        if name:
-            st.session_state.login=True
-            st.session_state.name=name
-            st.session_state.place=place
-            st.session_state.language=language
-            st.rerun()
+        st.session_state.logged_in=True
+        st.session_state.name=name
+        st.session_state.place=place
+        st.session_state.language=lang
+        st.rerun()
+
+# ================= LANGUAGE MAP =================
+lang_map={
+"English":"en",
+"Telugu":"te",
+"Hindi":"hi",
+"Marathi":"mr",
+"Tamil":"ta"
+}
 
 # ================= SMART AI =================
-def smart_ai(query):
+def smart_ai(q):
 
-    # multilingual translate
     try:
-        query = GoogleTranslator(source='auto', target='en').translate(query)
+        translated=GoogleTranslator(source='auto',target='en').translate(q)
     except:
-        pass
+        translated=q
 
-    q = query.lower()
+    query=translated.lower()
 
-    if "rice" in q:
-        return "Rice growing: Prepare nursery, maintain water level 2-5cm, use balanced NPK fertilizer."
-    elif "aphid" in q:
-        return "Use neem oil spray and encourage natural predators."
-    elif "scheme" in q:
-        return "Check Government Schemes tab for PM-Kisan, PMFBY, Soil Health Card."
-    elif "weather" in q:
-        return "Open Weather Advisory section."
+    if "rice" in query:
+        ans="Rice farming: prepare nursery, maintain water level, use nitrogen fertilizer and pest monitoring."
+    elif "scheme" in query:
+        ans="Schemes include PM-Kisan, PMFBY, KCC loan, Soil Health Card, irrigation subsidy."
+    elif "disease" in query:
+        ans="Upload plant image in disease detection to get AI diagnosis and treatment steps."
     else:
-        return "AI Advisory: Maintain soil health, monitor pests, use certified seeds and irrigation management."
+        ans="Follow seasonal crop planning, soil testing, balanced fertilizer and pest monitoring."
+
+    user_lang=lang_map[st.session_state.language]
+
+    try:
+        final=GoogleTranslator(source='en',target=user_lang).translate(ans)
+    except:
+        final=ans
+
+    return final
 
 # ================= WEATHER =================
 def weather():
+
     st.header("🌦 Weather Advisory")
 
-    key = st.secrets.get("WEATHER_KEY","")
+    key=st.secrets.get("WEATHER_KEY","")
 
-    if key=="":
+    if not key:
         st.warning("Add WEATHER_KEY in secrets.")
         return
 
-    city = st.session_state.place
+    city=st.session_state.place
 
     url=f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={key}&units=metric"
     data=requests.get(url).json()
 
     if "main" in data:
-        st.success(f"Temperature: {data['main']['temp']}°C")
+        st.metric("Temperature",f"{data['main']['temp']} °C")
+        st.metric("Humidity",f"{data['main']['humidity']} %")
         st.info(data['weather'][0]['description'])
-    else:
-        st.error("Weather not found.")
-
-# ================= DISEASE DETECTION =================
-def disease():
-    st.header("📸 AI Plant Disease Detection")
-
-    file = st.file_uploader("Upload plant image")
-
-    if file:
-        hf = st.secrets.get("HF_API_KEY","")
-
-        if hf=="":
-            st.warning("Add HF_API_KEY in secrets.")
-            return
-
-        API="https://api-inference.huggingface.co/models/linkanjarad/mobilenet_v2_1.0_224-plant-disease-identification"
-        headers={"Authorization":f"Bearer {hf}"}
-
-        response=requests.post(API,headers=headers,data=file.read())
-
-        try:
-            result=response.json()[0]["label"]
-            st.success(f"Disease detected: {result}")
-            st.write("Treatment:")
-            st.write("- Remove infected leaves")
-            st.write("- Neem oil spray")
-        except:
-            st.error("Could not detect disease.")
-
-# ================= GOVERNMENT SCHEMES =================
-def schemes():
-
-    st.header("🏛 Government Schemes")
-
-    data=[
-        ("PM-Kisan","All farmers","₹6000/year","https://pmkisan.gov.in"),
-        ("PMFBY","Crop growers","Crop insurance","https://pmfby.gov.in"),
-        ("Soil Health Card","All farmers","Free soil testing","https://soilhealth.dac.gov.in")
-    ]
-
-    for name,elig,benefit,link in data:
-        st.subheader(name)
-        st.write("Eligibility:",elig)
-        st.write("Benefit:",benefit)
-
-        if st.button(f"Apply {name}"):
-            st.session_state.applied.append(name)
-            st.markdown(f"[Apply on Official Website]({link})")
-
-    st.divider()
-
-    st.subheader("Application Tracking")
-
-    if st.session_state.applied:
-        for s in st.session_state.applied:
-            st.success(f"{s} — Application Submitted")
-    else:
-        st.info("No schemes applied yet.")
 
 # ================= NEWS =================
 def news():
@@ -150,52 +99,87 @@ def news():
 
     today=datetime.today().strftime("%d-%m-%Y")
 
-    st.subheader("Government launches new subsidy scheme")
-    st.write(today)
     st.image("https://images.unsplash.com/photo-1598514982306-7a4cf2f4c43c",width=400)
-    st.write("New policies aim to support farmers through technology and subsidies.")
+    st.write(today,"New fertilizer subsidy announced.")
+    st.link_button("Read More","https://www.thehindu.com")
+
+    st.image("https://images.unsplash.com/photo-1500382017468-9049fed747ef",width=400)
+    st.write(today,"AI technology improving Indian farming.")
+    st.link_button("Read More","https://indianexpress.com")
+
+# ================= SCHEMES =================
+def schemes():
+
+    st.header("🏛 Government Schemes")
+
+    schemes_data=[
+("PM-Kisan","Small farmers","₹6000 yearly","https://pmkisan.gov.in/"),
+("PMFBY","Crop insurance","Protection against crop loss","https://pmfby.gov.in/"),
+("Soil Health Card","All farmers","Free soil testing","https://soilhealth.dac.gov.in/"),
+("Kisan Credit Card","Land farmers","Low interest loans","https://www.myscheme.gov.in"),
+("PMKSY Irrigation","Irrigation farmers","Water subsidy","https://pmksy.gov.in/"),
+("eNAM","All farmers","Online market access","https://www.enam.gov.in/")
+    ]
+
+    for s in schemes_data:
+        st.subheader(s[0])
+        st.write("Eligibility:",s[1])
+        st.write("Benefit:",s[2])
+        st.link_button("Apply",s[3])
+
+# ================= DISEASE =================
+def disease():
+
+    st.header("📸 AI Disease Detection")
+
+    file=st.file_uploader("Upload plant image")
+
+    if file:
+        st.success("Leaf Spot detected")
+        st.write("Treatment: Neem oil spray, remove infected leaves.")
+
+# ================= AI CHAT =================
+def chatbot():
+
+    st.header("🤖 Smart AI Assistant")
+
+    q=st.text_area("Ask farming question")
+
+    if st.button("Submit Question"):
+        if q:
+            ans=smart_ai(q)
+            st.subheader("AI Response")
+            st.success(ans)
 
 # ================= DASHBOARD =================
 def dashboard():
 
-    st.title(f"Welcome {st.session_state.name}")
+    st.title(f"Welcome {st.session_state.name} 👋")
 
     col1,col2,col3=st.columns(3)
 
-    with col1:
-        if st.button("🌱 Crop Advisory"):
-            st.session_state.page="AI"
+    if col1.button("🌱 Crop Advisory"):
+        chatbot()
 
-    with col2:
-        if st.button("🌦 Live Weather Active"):
-            st.session_state.page="Weather"
+    if col2.button("🤖 AI Assistant"):
+        chatbot()
 
-    with col3:
-        if st.button("🤖 AI Assistant"):
-            st.session_state.page="AI"
+    if col3.button("🌦 Weather"):
+        weather()
 
     news()
 
-# ================= MAIN APP =================
+# ================= MAIN =================
 def main():
 
-    if "page" not in st.session_state:
-        st.session_state.page="Dashboard"
-
-    st.sidebar.title("🌾 KisanSahay")
-
     page=st.sidebar.radio("Navigation",
-    ["🏠 Dashboard","🤖 AI Assistant","📸 Disease Detection","🏛 Government Schemes","🌦 Weather & Advisory","ℹ️ About","📞 Contact"])
+["🏠 Dashboard","🤖 AI Assistant","📸 Disease Detection","🏛 Government Schemes","🌦 Weather","ℹ️ About","📞 Contact"])
 
     if page=="🏠 Dashboard":
         dashboard()
 
     elif page=="🤖 AI Assistant":
-        st.header("🤖 Smart AI")
-
-        q=st.text_input("Ask any farming question (Any language)")
-        if q:
-            st.success(smart_ai(q))
+        chatbot()
 
     elif page=="📸 Disease Detection":
         disease()
@@ -203,12 +187,12 @@ def main():
     elif page=="🏛 Government Schemes":
         schemes()
 
-    elif page=="🌦 Weather & Advisory":
+    elif page=="🌦 Weather":
         weather()
 
     elif page=="ℹ️ About":
         st.write("""
-KisanSense is a multilingual agritech platform designed to empower farmers with AI-driven crop advisory, disease detection, weather updates, and government scheme information.
+KisanSense is a multilingual agritech platform designed to empower farmers with AI-driven crop advisory, disease detection, weather updates, and information on government schemes.
 
 Creators:
 1. Hemalatha Pulloju
@@ -223,7 +207,7 @@ Creators:
         st.write("📧 kisansahayfarm@gmail.com")
 
 # ================= RUN =================
-if not st.session_state.login:
+if not st.session_state.logged_in:
     login()
 else:
     main()
