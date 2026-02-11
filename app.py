@@ -1,236 +1,189 @@
 import streamlit as st
-import random
+import requests
 from datetime import datetime
+from deep_translator import GoogleTranslator
 
-# =====================================================
-# PAGE CONFIG
-# =====================================================
-st.set_page_config(page_title="KisanSahay", layout="wide", page_icon="🌾")
+# ================= PAGE CONFIG =================
+st.set_page_config(page_title="KisanSahay", layout="wide")
 
-# =====================================================
-# BACKGROUND UI
-# =====================================================
+# ================= STYLE =================
 st.markdown("""
 <style>
-.stApp{
-background-image: linear-gradient(rgba(0,0,0,0.75),rgba(0,0,0,0.75)),
-url("https://images.unsplash.com/photo-1500382017468-9049fed747ef");
-background-size: cover;
-}
-h1,h2,h3,h4,h5,p,label{color:white !important;}
-.stButton>button{
-background:#2ecc71;
-color:white;
-border-radius:12px;
-}
-.block-container{
-background: rgba(0,0,0,0.65);
-padding:20px;
-border-radius:20px;
-}
+.stApp {background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);}
+h1,h2,h3,h4,p,label {color:white !important;}
 </style>
 """, unsafe_allow_html=True)
 
-# =====================================================
-# SESSION
-# =====================================================
+# ================= SESSION =================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in=False
 
-if "page" not in st.session_state:
-    st.session_state.page="🏠 Dashboard"
-
-# =====================================================
-# OFFLINE LANGUAGE PREFIX (NO API)
-# =====================================================
-def translate_text(text, lang):
-
-    prefix = {
-        "Telugu": "🌾 వ్యవసాయ సూచన: ",
-        "Hindi": "🌾 कृषि सलाह: ",
-        "Tamil": "🌾 வேளாண்மை ஆலோசனை: ",
-        "Marathi": "🌾 शेती सल्ला: ",
-        "Kannada": "🌾 ಕೃಷಿ ಸಲಹೆ: ",
-        "English": ""
-    }
-
-    return prefix.get(lang,"") + text
-
-# =====================================================
-# LOGIN PAGE
-# =====================================================
+# ================= LOGIN =================
 def login():
+    st.title("🌾 KisanSahay Farmer Login")
 
-    st.title("🌾 Welcome to KisanSahay")
-
-    col1,col2=st.columns(2)
-
-    with col1:
-        name=st.text_input("Farmer Name")
-        place=st.text_input("Village / City")
-        land=st.selectbox("Land Size",["<1 Acre","1-3 Acres","3-5 Acres","5+ Acres"])
-
-    with col2:
-        phone=st.text_input("Mobile Number")
-        language=st.selectbox("Language",
-        ["English","Telugu","Hindi","Marathi","Tamil","Kannada"])
+    name = st.text_input("Farmer Name")
+    place = st.text_input("Village / City")
+    lang = st.selectbox("Language",
+                        ["English","Telugu","Hindi","Marathi","Tamil"])
 
     if st.button("Login"):
-        if name and place:
-            st.session_state.logged_in=True
-            st.session_state.name=name
-            st.session_state.place=place
-            st.session_state.land=land
-            st.session_state.language=language
-            st.rerun()
+        st.session_state.logged_in = True
+        st.session_state.name = name
+        st.session_state.place = place
+        st.session_state.language = lang
+        st.rerun()
 
-# =====================================================
-# SMART AI ASSISTANT (NO API + BIG ANSWERS + PREDICTION)
-# =====================================================
-def ai_chat():
+# ================= LANGUAGE MAP =================
+lang_map = {
+    "English":"en",
+    "Telugu":"te",
+    "Hindi":"hi",
+    "Marathi":"mr",
+    "Tamil":"ta"
+}
 
-    st.header("🤖 Smart AI Assistant")
+# ================= SMART AI =================
+def smart_ai(q):
+    # Get user-selected language code (default to English)
+    user_lang_code = lang_map.get(st.session_state.language, "en")
 
-    lang=st.selectbox("Select Answer Language",
-    ["English","Telugu","Hindi","Marathi","Tamil","Kannada"])
+    # 1️⃣ Translate user query to English for processing
+    try:
+        translated_query = GoogleTranslator(source='auto', target='en').translate(q)
+    except:
+        translated_query = q
 
-    query=st.text_area("Ask anything about farming, crops, fertilizer, schemes, weather...")
+    query = translated_query.lower()
 
-    if st.button("Submit Question"):
+    # 2️⃣ Generate AI response
+    if "rice" in query:
+        ans = "Rice farming: prepare nursery, maintain water level, use nitrogen fertilizer and pest monitoring."
+    elif "scheme" in query:
+        ans = "Schemes include PM-Kisan, PMFBY, KCC loan, Soil Health Card, irrigation subsidy."
+    elif "disease" in query:
+        ans = "Upload plant image in disease detection to get AI diagnosis and treatment steps."
+    else:
+        ans = "Follow seasonal crop planning, soil testing, balanced fertilizer and pest monitoring."
 
-        if query:
+    # 3️⃣ Translate AI response to user's language
+    try:
+        final_response = GoogleTranslator(source='en', target=user_lang_code).translate(ans)
+    except:
+        final_response = ans
 
-            q=query.lower()
+    return final_response
 
-            knowledge_base={
-
-            "rice":"""Rice cultivation requires proper water management, good nursery preparation, and correct transplantation timing. Farmers should maintain standing water during early growth stages and gradually reduce water before harvesting. Using balanced nitrogen fertilizer improves leaf growth and grain quality. Farmers must also monitor pests like stem borer and leaf folder regularly. Proper spacing and weed management significantly increase yield.""",
-
-            "fertilizer":"""Fertilizers are essential for crop productivity. Farmers must use balanced NPK fertilizers based on soil test results. Excess nitrogen can cause pest attacks and weak stems. Organic fertilizers like compost improve soil microbial activity and long-term fertility. Split fertilizer application ensures better nutrient absorption and reduces wastage. Farmers should also consider micronutrients like zinc and boron for better crop development.""",
-
-            "scheme":"""Government schemes support farmers financially and technically. PM-KISAN provides direct income support to farmers. PMFBY crop insurance protects against crop loss due to natural disasters. Soil Health Card helps farmers understand soil nutrient levels and fertilizer recommendations. Kisan Credit Card provides low-interest loans. Farmers should regularly check official portals and local agriculture offices for new scheme updates and subsidy opportunities.""",
-
-            "weather":"""Weather plays a major role in farming success. Farmers must plan irrigation based on rainfall forecast and temperature trends. During high temperature periods, mulching helps retain soil moisture. During heavy rainfall periods, proper drainage prevents root rot. Humidity increase can trigger fungal diseases, so preventive spraying is important. Weather-based farming planning helps increase productivity and reduce risk.""",
-
-            "disease":"""Plant diseases spread due to fungus, bacteria, or viruses. Farmers must monitor leaves regularly for spots, discoloration, or unusual patterns. Early detection helps prevent full crop damage. Neem oil and bio pesticides are safe preventive solutions. Removing infected plant parts prevents spread. Maintaining field hygiene and proper spacing reduces disease risk significantly."""
-            }
-
-            response="Smart farming requires soil health monitoring, balanced fertilizer use, pest monitoring, and climate-based decision making."
-
-            for key in knowledge_base:
-                if key in q:
-                    response=knowledge_base[key]
-
-            # Prediction style add-on
-            prediction_add = """
-
-📊 Future Farming Prediction:
-• Yield can increase by 15-25% if balanced fertilizer and irrigation used.
-• Pest risk may increase during humidity rise.
-• Climate smart farming improves profit stability.
-• Soil organic matter improvement increases long term productivity.
-"""
-
-            final_text = translate_text(response + prediction_add, lang)
-
-            st.success(final_text)
-
-# =====================================================
-# DISEASE DETECTION (SIMULATION)
-# =====================================================
-def disease():
-
-    st.header("📸 AI Plant Disease Detection")
-
-    file=st.file_uploader("Upload leaf image", type=["jpg","png"])
-
-    if file:
-
-        diseases=[
-        ("Leaf Blight","Fungal infection causing brown patches."),
-        ("Powdery Mildew","White powder on leaf surface."),
-        ("Bacterial Spot","Yellow lesions spreading rapidly."),
-        ("Healthy Plant","No disease detected.")
-        ]
-
-        pred=random.choice(diseases)
-
-        st.success(f"Disease: {pred[0]}")
-
-        st.write(f"""
-Detailed Analysis Report:
-
-{pred[1]}
-
-Prevention & Control:
-• Remove infected leaves
-• Use neem pesticide
-• Maintain spacing
-• Avoid over irrigation
-• Monitor crop daily
-""")
-
-# =====================================================
-# WEATHER WITH DATE
-# =====================================================
+# ================= WEATHER =================
 def weather():
+    st.header("🌦 Weather Advisory")
+    key = st.secrets.get("WEATHER_KEY","")
+    if not key:
+        st.warning("Add WEATHER_KEY in secrets.")
+        return
 
-    st.header("🌦 Weather & Advisory")
+    city = st.session_state.place
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={key}&units=metric"
+    data = requests.get(url).json()
 
-    today=datetime.now()
+    if "main" in data:
+        st.metric("Temperature",f"{data['main']['temp']} °C")
+        st.metric("Humidity",f"{data['main']['humidity']} %")
+        st.info(data['weather'][0]['description'])
 
-    st.write(f"📍 Location: {st.session_state.place}")
-    st.write(f"📅 Date: {today.strftime('%d %B %Y')}")
+# ================= NEWS =================
+def news():
+    st.header("📰 Agriculture News India")
+    today = datetime.today().strftime("%d-%m-%Y")
 
-    cols=st.columns(4)
+    st.image("https://images.unsplash.com/photo-1598514982306-7a4cf2f4c43c",width=400)
+    st.write(today,"New fertilizer subsidy announced.")
+    st.link_button("Read More","https://www.thehindu.com")
 
-    cols[0].metric("Temperature",f"{random.randint(25,34)}°C")
-    cols[1].metric("Humidity",f"{random.randint(50,90)}%")
-    cols[2].metric("Rain Chance",f"{random.randint(10,80)}%")
-    cols[3].metric("Wind Speed",f"{random.randint(5,25)} km/h")
+    st.image("https://images.unsplash.com/photo-1500382017468-9049fed747ef",width=400)
+    st.write(today,"AI technology improving Indian farming.")
+    st.link_button("Read More","https://indianexpress.com")
 
-    st.info("Apply fertilizer during cool hours.")
-    st.warning("Monitor pests during humidity increase.")
+# ================= SCHEMES =================
+def schemes():
+    st.header("🏛 Government Schemes")
+    schemes_data=[
+        ("PM-Kisan","Small farmers","₹6000 yearly","https://pmkisan.gov.in/"),
+        ("PMFBY","Crop insurance","Protection against crop loss","https://pmfby.gov.in/"),
+        ("Soil Health Card","All farmers","Free soil testing","https://soilhealth.dac.gov.in/"),
+        ("Kisan Credit Card","Land farmers","Low interest loans","https://www.myscheme.gov.in"),
+        ("PMKSY Irrigation","Irrigation farmers","Water subsidy","https://pmksy.gov.in/"),
+        ("eNAM","All farmers","Online market access","https://www.enam.gov.in/")
+    ]
 
-# =====================================================
-# DASHBOARD WITH NEWSPAPER STYLE NEWS
-# =====================================================
+    for s in schemes_data:
+        st.subheader(s[0])
+        st.write("Eligibility:",s[1])
+        st.write("Benefit:",s[2])
+        st.link_button("Apply",s[3])
+
+# ================= DISEASE =================
+def disease():
+    st.header("📸 AI Disease Detection")
+    file = st.file_uploader("Upload plant image")
+    if file:
+        st.success("Leaf Spot detected")
+        st.write("Treatment: Neem oil spray, remove infected leaves.")
+
+# ================= AI CHAT =================
+def chatbot():
+    st.header("🤖 Smart AI Assistant")
+    q = st.text_area("Ask farming question")
+    if st.button("Submit Question"):
+        if q:
+            ans = smart_ai(q)
+            st.subheader("AI Response")
+            st.success(ans)
+
+# ================= DASHBOARD =================
 def dashboard():
-
     st.title(f"Welcome {st.session_state.name} 👋")
-
-    st.subheader("📰 Agriculture Current Affairs — Newspaper Style")
-
-    st.write("""
-India is rapidly moving towards digital agriculture and climate smart farming practices. Government and private sectors are investing heavily in precision farming, AI crop monitoring, and smart irrigation systems. Recently, new subsidy programs were introduced to support small and marginal farmers in purchasing modern farming equipment. Hybrid crop varieties are showing higher productivity and better climate resistance. Experts suggest farmers adopt soil testing, crop rotation, and organic matter enrichment to improve long term sustainability. Digital advisory platforms are helping farmers make real-time decisions based on weather, market price, and pest alerts. These developments are expected to improve farmer income and reduce crop failure risks across India.
-""")
-
-# =====================================================
-# MAIN NAVIGATION
-# =====================================================
-def main():
-
-    st.sidebar.title("🌾 KisanSahay")
-
-    menu=["🏠 Dashboard","🤖 AI Assistant","📸 Disease Detection","🌦 Weather & Advisory"]
-
-    selected=st.sidebar.radio("Navigation",menu)
-
-    if selected=="🏠 Dashboard":
-        dashboard()
-    elif selected=="🤖 AI Assistant":
-        ai_chat()
-    elif selected=="📸 Disease Detection":
-        disease()
-    elif selected=="🌦 Weather & Advisory":
+    col1,col2,col3 = st.columns(3)
+    if col1.button("🌱 Crop Advisory"):
+        chatbot()
+    if col2.button("🤖 AI Assistant"):
+        chatbot()
+    if col3.button("🌦 Weather"):
         weather()
+    news()
 
-# =====================================================
-# RUN
-# =====================================================
+# ================= MAIN =================
+def main():
+    page = st.sidebar.radio("Navigation",
+["🏠 Dashboard","🤖 AI Assistant","📸 Disease Detection","🏛 Government Schemes","🌦 Weather","ℹ️ About","📞 Contact"])
+
+    if page=="🏠 Dashboard":
+        dashboard()
+    elif page=="🤖 AI Assistant":
+        chatbot()
+    elif page=="📸 Disease Detection":
+        disease()
+    elif page=="🏛 Government Schemes":
+        schemes()
+    elif page=="🌦 Weather":
+        weather()
+    elif page=="ℹ️ About":
+        st.write("""
+KisanSense is a multilingual agritech platform designed to empower farmers with AI-driven crop advisory, disease detection, weather updates, and information on government schemes.
+
+Creators:
+1. Hemalatha Pulloju
+2. Thapasi Swarna
+3. Divya Sree
+4. Shivani
+5. Divya
+""")
+    elif page=="📞 Contact":
+        st.write("📞 +91 9059184778")
+        st.write("📧 kisansahayfarm@gmail.com")
+
+# ================= RUN =================
 if not st.session_state.logged_in:
     login()
 else:
     main()
-
-
