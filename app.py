@@ -31,7 +31,6 @@ if "page" not in st.session_state:
 
 # ================= LOGIN =================
 def login():
-
     st.title("🌾 Welcome to KisanSahay")
 
     col1,col2=st.columns(2)
@@ -47,7 +46,6 @@ def login():
         ["English","Telugu","Hindi","Marathi","Tamil"])
 
     if st.button("Login"):
-
         if name and place:
             st.session_state.logged_in=True
             st.session_state.name=name
@@ -56,47 +54,37 @@ def login():
             st.session_state.language=language
             st.rerun()
 
-# ================= SMART AI CHAT (NO API) =================
+# ================= SMART AI MULTILINGUAL =================
 def ai_chat():
 
     st.header("🤖 Smart AI Assistant")
+
+    lang=st.selectbox("Select Language",
+    ["English","Telugu","Hindi","Marathi","Tamil"])
 
     query=st.text_input("Ask anything about crops, disease, schemes, farming...")
 
     if query:
 
-        # translate to english
         translated=GoogleTranslator(source='auto', target='en').translate(query)
-
         q=translated.lower()
 
         if "rice" in q:
-            response="""Rice cultivation requires good water management, proper nursery preparation, and balanced fertilizer application.
-Maintain standing water during early growth stages. Use nitrogen in split doses to increase yield. Monitor for pests like stem borer and use integrated pest management practices."""
-        
-        elif "disease" in q or "leaf" in q:
-            response="""Plant diseases usually appear due to fungal or bacterial infection. Remove infected leaves immediately.
-Maintain airflow between plants, avoid overwatering, and apply neem-based bio-pesticides regularly for prevention."""
-        
+            response="Rice cultivation requires good water management, nursery preparation and balanced fertilizers."
+        elif "disease" in q:
+            response="Remove infected leaves, maintain airflow, and use neem bio-pesticide."
         elif "scheme" in q:
-            response="""Indian farmers can benefit from PM-Kisan income support, PMFBY crop insurance, Soil Health Card scheme, and Kisan Credit Card loans. 
-These schemes provide financial assistance, crop protection, and soil fertility improvement guidance."""
-        
+            response="Farmers can use PM-KISAN, PMFBY insurance, Soil Health Card and Kisan Credit Card schemes."
         elif "fertilizer" in q:
-            response="""Use balanced NPK fertilizer based on crop stage. Always conduct soil testing before heavy fertilizer application.
-Organic compost improves soil structure and increases long-term productivity."""
-        
+            response="Use balanced NPK and perform soil testing before heavy fertilizer usage."
         else:
-            response="""Smart Farming Advice:
-Monitor soil moisture regularly, use certified seeds, adopt crop rotation, and follow weather-based irrigation planning.
-Technology-based agriculture improves yield and reduces risk."""
+            response="Monitor soil moisture, follow crop rotation, and use technology-based farming."
 
-        # translate back
-        final=GoogleTranslator(source='en',target='auto').translate(response)
+        final=GoogleTranslator(source='en', target=lang).translate(response)
 
         st.success(final)
 
-# ================= WEATHER (SIMULATED INTELLIGENT) =================
+# ================= WEATHER =================
 def weather():
 
     st.header("🌦 Weather & Advisory")
@@ -110,12 +98,7 @@ def weather():
     st.metric("Temperature",f"{temp} °C")
     st.metric("Humidity",f"{humidity}%")
 
-    if temp>32:
-        st.warning("High temperature expected. Increase irrigation.")
-    else:
-        st.success("Good weather for crop growth.")
-
-# ================= DISEASE DETECTION (SIMULATED AI) =================
+# ================= DISEASE =================
 def disease():
 
     st.header("📸 AI Plant Disease Detection")
@@ -123,34 +106,35 @@ def disease():
     file=st.file_uploader("Upload crop image", type=["jpg","png"])
 
     if file:
-
-        diseases=[
-        "Leaf Blight",
-        "Powdery Mildew",
-        "Bacterial Spot",
-        "Healthy Plant"]
-
+        diseases=["Leaf Blight","Powdery Mildew","Bacterial Spot","Healthy Plant"]
         prediction=random.choice(diseases)
-
         st.success(f"Disease Detected: {prediction}")
-
-        st.write("""
-Recommended Actions:
-- Remove infected leaves
-- Apply neem oil spray
-- Maintain plant spacing
-- Avoid waterlogging
-""")
 
 # ================= SCHEMES =================
 def schemes():
 
     st.header("🏛 Government Schemes")
 
-    st.write("PM-KISAN — ₹6000 yearly income support")
-    st.write("PMFBY — Crop Insurance")
-    st.write("Kisan Credit Card — Low interest loans")
-    st.write("Soil Health Card — Free soil testing")
+    schemes_data=[
+
+    ("PM-KISAN","Income support ₹6000/year","Small farmers","Ministry of Agriculture","https://pmkisan.gov.in"),
+    ("PMFBY","Crop Insurance","All crop farmers","Govt of India","https://pmfby.gov.in"),
+    ("Kisan Credit Card","Low interest loan","Land holding farmers","NABARD","https://www.myscheme.gov.in"),
+    ("Soil Health Card","Free soil testing","All farmers","Agriculture Dept","https://soilhealth.dac.gov.in"),
+    ("PMKSY","Irrigation scheme","Farmers needing irrigation","Govt of India","https://pmksy.gov.in"),
+    ("NHM","Horticulture support","Fruit/veg farmers","National Horticulture Mission","https://nhm.gov.in"),
+    ("eNAM","Online market trading","Registered farmers","Govt of India","https://enam.gov.in"),
+    ("PKVY","Organic farming","Organic farmers","Govt of India","https://pgsindia-ncof.gov.in")
+    ]
+
+    for name,desc,elig,org,link in schemes_data:
+
+        st.subheader(name)
+        st.write("📄 Description:",desc)
+        st.write("✅ Eligibility:",elig)
+        st.write("🏢 Organization:",org)
+
+        st.link_button("Apply Now",link)
 
 # ================= DASHBOARD =================
 def dashboard():
@@ -173,29 +157,29 @@ def dashboard():
 
     st.subheader("📰 Farming News (Today)")
 
-    st.info("11-02-2026: New government subsidy announced for small farmers.")
-    st.info("11-02-2026: Rice productivity increased using hybrid varieties.")
-    st.info("11-02-2026: Digital agriculture initiatives expanding in rural India.")
+    news=[
 
-# ================= NOTIFICATIONS =================
-def notifications():
+    ("Govt announces new subsidy","https://www.thehindu.com"),
+    ("Hybrid rice increases yield","https://indianexpress.com"),
+    ("Digital agriculture expansion","https://timesofindia.indiatimes.com")
 
-    st.header("🔔 Notifications")
+    ]
 
-    st.success("Rain expected in next 3 days — plan irrigation accordingly.")
-    st.warning("Check crop for early pest signs this week.")
-    st.info("Government subsidy registration open.")
+    for title,link in news:
+        st.write(title)
+        st.link_button("Read More",link)
 
 # ================= ABOUT =================
 def about():
 
-    st.write("""
-KisanSense is a multilingual agritech platform designed to empower farmers with AI-driven crop advisory, disease detection, weather updates, and information on government schemes.
+    st.markdown("""
+<h2 style='font-family:Georgia;'>KisanSense Platform</h2>
 
-It provides personalized guidance based on the farmer’s region, crops, and language preference.
-
-By integrating AI, digital tools, and rural accessibility, KisanSense helps farmers make smarter decisions, improve productivity, and reduce crop losses.
-""")
+<p style='font-size:18px;'>
+KisanSense is a multilingual agritech platform designed to empower farmers with AI-driven crop advisory,
+disease detection, weather updates, and government scheme information.
+</p>
+""",unsafe_allow_html=True)
 
     st.subheader("Creators")
     st.write("""
@@ -206,7 +190,7 @@ Shivani
 Divya
 """)
 
-# ================= MAIN APP =================
+# ================= MAIN =================
 def main():
 
     st.sidebar.title("🌾 KisanSahay")
@@ -216,7 +200,6 @@ def main():
           "🔔 Notifications","ℹ️ About","📞 Contact"]
 
     selected=st.sidebar.radio("Navigation",menu,index=menu.index(st.session_state.page))
-
     st.session_state.page=selected
 
     if selected=="🏠 Dashboard":
@@ -229,17 +212,10 @@ def main():
         schemes()
     elif selected=="🌦 Weather & Advisory":
         weather()
-    elif selected=="🔔 Notifications":
-        notifications()
     elif selected=="ℹ️ About":
         about()
     elif selected=="📞 Contact":
         st.write("📞 +91 9059184778")
         st.write("📧 kisansahayfarm@gmail.com")
 
-# ================= RUN =================
-if not st.session_state.logged_in:
-    login()
-else:
-    main()
-
+# =================
