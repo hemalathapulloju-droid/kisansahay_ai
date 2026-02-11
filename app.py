@@ -1,315 +1,341 @@
 import streamlit as st
-from datetime import datetime
+import requests
+from deep_translator import GoogleTranslator
+import base64
+import os
 
-# =====================================================
-# PAGE CONFIG
-# =====================================================
+# ================= PAGE CONFIG =================
 st.set_page_config(
     page_title="KisanSahay",
-    page_icon="🌾",
-    layout="wide"
+    layout="wide",
+    page_icon="🌾"
 )
 
-# =====================================================
-# DARK PROFESSIONAL UI (Fixes White Background Issue)
-# =====================================================
-st.markdown("""
-<style>
+# ================= BACKGROUND =================
+def add_bg():
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: linear-gradient(
+                rgba(0,0,0,0.75),
+                rgba(0,0,0,0.75)
+            ),
+            url("https://images.unsplash.com/photo-1500382017468-9049fed747ef");
+            background-size: cover;
+        }}
 
-.stApp{
-background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-color:white;
-}
+        h1, h2, h3, h4, h5, h6, p, label {{
+            color: white !important;
+        }}
 
-[data-testid="stSidebar"]{
-background: linear-gradient(180deg,#1c1c1c,#2b5876);
-}
+        .css-1d391kg {{
+            background-color: rgba(0,0,0,0.85);
+        }}
 
-h1,h2,h3,h4{
-color:#E8F6EF;
-}
+        .stButton>button {{
+            background-color: #2ecc71;
+            color: white;
+            border-radius: 10px;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
-.stButton>button{
-background-color:#00c853;
-color:white;
-border-radius:10px;
-height:3em;
-width:100%;
-font-size:16px;
-}
+add_bg()
 
-.stTextInput>div>div>input{
-background-color:#2b2b2b;
-color:white;
-}
+# ================= SESSION =================
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-.stSelectbox>div{
-background-color:#2b2b2b;
-}
+if "applied_schemes" not in st.session_state:
+    st.session_state.applied_schemes = []
 
-.card{
-padding:20px;
-border-radius:15px;
-background: rgba(255,255,255,0.05);
-box-shadow:0 8px 32px rgba(0,0,0,0.37);
-margin-bottom:20px;
-}
+# ================= LOGIN =================
+def login():
 
-</style>
-""", unsafe_allow_html=True)
+    st.title("🌾 Welcome to KisanSahay")
 
-# =====================================================
-# SESSION STATE
-# =====================================================
-if "chat" not in st.session_state:
-    st.session_state.chat = []
-
-if "farmer" not in st.session_state:
-    st.session_state.farmer = {
-        "name":"Hema Farmer",
-        "village":"Warangal",
-        "land":"<1 Acre"
-    }
-
-# =====================================================
-# SIDEBAR
-# =====================================================
-st.sidebar.title("🌾 KisanSahay")
-
-page = st.sidebar.radio("Navigation",[
-"🏠 Dashboard",
-"🤖 AI Assistant",
-"🌱 Crop Recommendation",
-"📸 Disease Detection",
-"🏛 Government Schemes",
-"🌦 Weather & Advisory",
-"🔔 Notifications",
-"ℹ️ About",
-"📞 Contact"
-])
-
-st.sidebar.markdown("---")
-st.sidebar.write("👩‍🌾 **Farmer Profile**")
-st.sidebar.write(f"Name: {st.session_state.farmer['name']}")
-st.sidebar.write(f"Village: {st.session_state.farmer['village']}")
-st.sidebar.write(f"Land: {st.session_state.farmer['land']}")
-
-# =====================================================
-# AI BRAIN (Answers Almost Anything Agriculture)
-# =====================================================
-def smart_agri_ai(q):
-
-    q = q.lower()
-
-    data = {
-
-        "fertilizer":
-        """✅ Use soil testing before fertilizer.
-        
-• Nitrogen → Leaf growth  
-• Phosphorus → Root strength  
-• Potassium → Disease resistance  
-
-Avoid overuse!""",
-
-        "pest":
-        """🐛 Integrated Pest Management:
-
-• Neem oil spray  
-• Crop rotation  
-• Biological predators  
-• Minimal chemical usage""",
-
-        "water":
-        """💧 Irrigation Tips:
-
-• Early morning watering  
-• Drip irrigation saves 60% water  
-• Avoid waterlogging""",
-
-        "profit":
-        """💰 Increase Farm Profit:
-
-• Choose high-demand crops  
-• Use government subsidies  
-• Sell directly via FPO / markets  
-• Reduce chemical dependency"""
-    }
-
-    for key in data:
-        if key in q:
-            return data[key]
-
-    return """
-🌾 Smart Advisory:
-
-• Follow seasonal crop patterns  
-• Monitor weather regularly  
-• Use certified seeds  
-• Adopt AI & modern farming  
-
-👉 For best results consult local agriculture officer.
-"""
-
-# =====================================================
-# DASHBOARD
-# =====================================================
-if page=="🏠 Dashboard":
-
-    st.title("🚜 Welcome to KisanSahay")
-
-    col1,col2,col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown('<div class="card">🌱 Crop AI<br><br>Get intelligent crop predictions.</div>',unsafe_allow_html=True)
+        name = st.text_input("Farmer Name")
+        place = st.text_input("Village / City")
+        land = st.selectbox("Land Size", ["<1 Acre", "1-3 Acres", "3-5 Acres", "5+ Acres"])
 
     with col2:
-        st.markdown('<div class="card">🤖 Smart Farming Assistant<br><br>Ask anything about agriculture.</div>',unsafe_allow_html=True)
+        phone = st.text_input("Mobile Number")
+        language = st.selectbox("Preferred Language",
+                                ["English", "Telugu", "Hindi", "Marathi", "Tamil"])
 
-    with col3:
-        st.markdown('<div class="card">🏛 Govt Schemes<br><br>Unlock subsidies & benefits.</div>',unsafe_allow_html=True)
+    if st.button("Login"):
 
-    st.markdown("### 📊 Today's Insight")
+        if name and place:
+            st.session_state.logged_in = True
+            st.session_state.name = name
+            st.session_state.place = place
+            st.session_state.land = land
+            st.session_state.language = language
+            st.rerun()
 
-    st.success("✅ Weather looks favorable for irrigation.")
+        else:
+            st.warning("Please fill required details")
 
-# =====================================================
-# AI CHATBOT
-# =====================================================
-elif page=="🤖 AI Assistant":
 
-    st.title("🤖 Kisan AI Expert")
+# ================= AI CHAT =================
+def ai_chatbot():
 
-    user = st.chat_input("Ask ANY farming question...")
+    st.header("🤖 Smart AI Assistant")
 
-    if user:
-        st.session_state.chat.append(("You",user))
-        reply = smart_agri_ai(user)
-        st.session_state.chat.append(("AI",reply))
+    query = st.text_input("Ask anything about crops, diseases, schemes...")
 
-    for sender,msg in st.session_state.chat:
-        st.chat_message(sender).write(msg)
+    # VOICE INPUT
+    audio = st.file_uploader("🎤 Upload Voice Question", type=["wav","mp3"])
 
-# =====================================================
-# CROP RECOMMENDATION
-# =====================================================
-elif page=="🌱 Crop Recommendation":
+    if audio:
+        st.info("Voice received — converting to text requires Whisper API (optional).")
 
-    st.title("🌱 AI Crop Predictor")
+    if query:
 
-    soil = st.selectbox("Soil Type",["Black","Red","Sandy","Clay"])
-    season = st.selectbox("Season",["Kharif","Rabi","Zaid"])
+        # translate to english
+        translated = GoogleTranslator(source='auto', target='en').translate(query)
 
-    if st.button("Predict Crops"):
+        # SIMPLE INTELLIGENT RESPONSES
+        if "scheme" in translated.lower():
+            response = "You can explore PM-KISAN, PMFBY crop insurance, Soil Health Card, and KCC loans."
 
-        crops = {
-            ("Black","Kharif"):["Cotton","Soybean"],
-            ("Red","Rabi"):["Groundnut","Wheat"],
-            ("Sandy","Zaid"):["Watermelon","Cucumber"]
-        }
+        elif "disease" in translated.lower():
+            response = "Upload the crop image in Disease Detection for AI diagnosis."
 
-        result = crops.get((soil,season),["Rice","Maize","Pulses"])
+        elif "fertilizer" in translated.lower():
+            response = "Use balanced NPK fertilizers and always conduct soil testing."
 
-        st.success(f"✅ Recommended Crops: {', '.join(result)}")
+        else:
+            # OPTIONAL LLM CALL
+            HF_KEY = st.secrets.get("HF_API_KEY", "")
 
-# =====================================================
-# DISEASE DETECTION
-# =====================================================
-elif page=="📸 Disease Detection":
+            if HF_KEY:
 
-    st.title("📸 AI Disease Detection")
+                API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-large"
 
-    file = st.file_uploader("Upload Crop Image")
+                headers = {"Authorization": f"Bearer {HF_KEY}"}
+
+                payload = {"inputs": translated}
+
+                res = requests.post(API_URL, headers=headers, json=payload)
+
+                try:
+                    response = res.json()[0]["generated_text"]
+                except:
+                    response = "AI is learning — please try again."
+
+            else:
+                response = "AI key missing. Add HF_API_KEY in secrets."
+
+        # translate back
+        final = GoogleTranslator(source='en', target='auto').translate(response)
+
+        st.success(final)
+
+
+# ================= WEATHER =================
+def weather():
+
+    st.header("🌦 Real-Time Weather")
+
+    API_KEY = st.secrets.get("WEATHER_KEY","")
+
+    if not API_KEY:
+        st.warning("Add WEATHER_KEY in secrets.")
+        return
+
+    city = st.session_state.place
+
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
+
+    res = requests.get(url).json()
+
+    if res.get("main"):
+
+        temp = res["main"]["temp"]
+        humidity = res["main"]["humidity"]
+        desc = res["weather"][0]["description"]
+
+        st.metric("Temperature", f"{temp}°C")
+        st.metric("Humidity", f"{humidity}%")
+        st.info(desc)
+
+    else:
+        st.error("Weather not found.")
+
+
+# ================= DISEASE DETECTION =================
+def disease():
+
+    st.header("📸 AI Plant Disease Detection")
+
+    file = st.file_uploader("Upload Leaf Image", type=["jpg","png"])
 
     if file:
-        st.image(file,width=300)
-        st.warning("AI Module Ready → Connect PlantVillage API for real detection.")
 
-# =====================================================
-# HUGE GOVERNMENT SCHEMES
-# =====================================================
-elif page=="🏛 Government Schemes":
+        HF_KEY = st.secrets.get("HF_API_KEY","")
 
-    st.title("🏛 Farmer Welfare Schemes")
+        if not HF_KEY:
+            st.warning("Add HF_API_KEY in secrets.")
+            return
 
-    schemes = [
+        API_URL = "https://api-inference.huggingface.co/models/linkanjarad/mobilenet_v2_1.0_224-plant-disease-identification"
 
-        "PM-KISAN – ₹6000 yearly income support",
-        "PMFBY – Crop insurance",
-        "Soil Health Card – Free soil testing",
-        "KCC – Low interest credit",
-        "PKVY – Organic farming support",
-        "Sub-Mission on Seeds",
-        "National Beekeeping Initiative",
-        "Blue Revolution – Fisheries",
-        "Micro Irrigation Fund",
-        "Agriculture Infrastructure Fund",
-        "e-NAM digital marketplace",
-        "Paramparagat Krishi Yojana",
-        "Dairy Entrepreneurship Development",
-        "Rashtriya Krishi Vikas Yojana",
-        "National Food Security Mission"
+        headers = {"Authorization": f"Bearer {HF_KEY}"}
+
+        res = requests.post(API_URL, headers=headers, data=file.read())
+
+        try:
+            prediction = res.json()[0]["label"]
+
+            st.success(f"Disease Detected: {prediction}")
+
+            st.write("### Recommended Action:")
+            st.write("- Remove infected leaves")
+            st.write("- Apply neem oil")
+            st.write("- Avoid overwatering")
+
+        except:
+            st.error("Could not detect. Try clearer image.")
+
+
+# ================= SCHEMES =================
+def schemes():
+
+    st.header("🏛 Government Schemes")
+
+    scheme_data = [
+
+        {
+            "name":"PM-KISAN",
+            "eligibility":"All small & marginal farmers",
+            "benefit":"₹6000 per year",
+            "link":"https://pmkisan.gov.in/"
+        },
+
+        {
+            "name":"PMFBY Crop Insurance",
+            "eligibility":"Farmers growing notified crops",
+            "benefit":"Insurance against crop loss",
+            "link":"https://pmfby.gov.in/"
+        },
+
+        {
+            "name":"Kisan Credit Card",
+            "eligibility":"Farmers with land",
+            "benefit":"Low-interest loans",
+            "link":"https://www.myscheme.gov.in/schemes/kcc"
+        },
+
+        {
+            "name":"Soil Health Card",
+            "eligibility":"All farmers",
+            "benefit":"Free soil testing",
+            "link":"https://soilhealth.dac.gov.in/"
+        }
     ]
 
-    search = st.text_input("Search schemes...")
+    for s in scheme_data:
 
-    for s in schemes:
-        if search.lower() in s.lower():
-            st.markdown(f'<div class="card">✅ {s}</div>',unsafe_allow_html=True)
+        with st.container():
 
-# =====================================================
-# WEATHER
-# =====================================================
-elif page=="🌦 Weather & Advisory":
+            st.subheader(s["name"])
+            st.write(f"✅ Eligibility: {s['eligibility']}")
+            st.write(f"💰 Benefit: {s['benefit']}")
 
-    st.title("🌦 Smart Weather Advisory")
+            col1, col2 = st.columns(2)
 
-    st.info("🌤 28°C | Humidity: 60%")
-    st.warning("Rain expected in 48 hrs — Delay pesticide spray.")
+            if col1.button(f"Apply for {s['name']}"):
+                st.session_state.applied_schemes.append(s["name"])
+                st.success("Application tracked!")
 
-# =====================================================
-# NOTIFICATIONS
-# =====================================================
-elif page=="🔔 Notifications":
+                st.markdown(f"[CLICK HERE TO APPLY]({s['link']})")
 
-    st.title("🔔 Alerts")
+    st.divider()
 
-    st.success("Subsidy deadline approaching!")
-    st.info("Market prices increased for pulses.")
+    st.subheader("📊 Application Tracking")
 
-# =====================================================
-# ABOUT
-# =====================================================
-elif page=="ℹ️ About":
+    if st.session_state.applied_schemes:
+        for a in st.session_state.applied_schemes:
+            st.write(f"🟢 {a} — In Progress")
 
-    st.title("About KisanSahay")
+    else:
+        st.info("No schemes applied yet.")
 
-    st.write("""
-KisanSahay is an AI-powered agricultural ecosystem designed to empower farmers with:
 
-✅ AI advisory  
-✅ Crop intelligence  
-✅ Scheme awareness  
-✅ Smart alerts  
-✅ Disease detection  
+# ================= DASHBOARD =================
+def dashboard():
 
-Built for next-generation digital agriculture 🚀
-""")
+    st.title(f"Welcome {st.session_state.name} 👋")
 
-# =====================================================
-# CONTACT
-# =====================================================
-elif page=="📞 Contact":
+    col1, col2, col3 = st.columns(3)
 
-    st.title("Contact")
+    col1.success("🌱 Crop Advisory Ready")
+    col2.info("🤖 AI Enabled")
+    col3.warning("🌦 Live Weather Active")
 
-    st.write("📧 support@kisansahay.ai")
-    st.write("☎ 1800-123-456")
+    st.write("KisanSahay — AI Powered Farming Platform")
 
-    msg = st.text_area("Send us a message")
 
-    if st.button("Submit"):
-        st.success("We will contact you soon!")
+# ================= SIDEBAR =================
+def main_app():
+
+    st.sidebar.title("🌾 KisanSahay")
+
+    page = st.sidebar.radio("Navigation", [
+
+        "🏠 Dashboard",
+        "🤖 AI Assistant",
+        "📸 Disease Detection",
+        "🏛 Government Schemes",
+        "🌦 Weather & Advisory",
+        "🔔 Notifications",
+        "ℹ️ About",
+        "📞 Contact"
+    ])
+
+    st.sidebar.write(f"👤 {st.session_state.name}")
+    st.sidebar.write(f"📍 {st.session_state.place}")
+    st.sidebar.write(f"🌾 {st.session_state.land}")
+
+    if page == "🏠 Dashboard":
+        dashboard()
+
+    elif page == "🤖 AI Assistant":
+        ai_chatbot()
+
+    elif page == "📸 Disease Detection":
+        disease()
+
+    elif page == "🏛 Government Schemes":
+        schemes()
+
+    elif page == "🌦 Weather & Advisory":
+        weather()
+
+    elif page == "🔔 Notifications":
+        st.info("No new alerts")
+
+    elif page == "ℹ️ About":
+        st.write("KisanSahay is an AI-driven smart farming platform helping farmers make better decisions.")
+
+    elif page == "📞 Contact":
+        st.write("📞 +91 9059184778")
+        st.write("📧 kisansahayfarm@gmail.com")
+
+
+# ================= RUN =================
+if not st.session_state.logged_in:
+    login()
+else:
+    main_app()
+
 
 
 
