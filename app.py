@@ -24,8 +24,7 @@ def login():
 
     name = st.text_input("Farmer Name")
     place = st.text_input("Village / City")
-    lang = st.selectbox("Language",
-                        ["English","Telugu","Hindi","Marathi","Tamil"])
+    lang = st.selectbox("Language", ["English","Telugu","Hindi","Marathi","Tamil"])
 
     if st.button("Login"):
         st.session_state.logged_in = True
@@ -45,10 +44,9 @@ lang_map = {
 
 # ================= SMART AI =================
 def smart_ai(q):
-    # Get user-selected language code (default to English)
     user_lang_code = lang_map.get(st.session_state.language, "en")
 
-    # 1️⃣ Translate user query to English for processing
+    # Translate user query to English for processing
     try:
         translated_query = GoogleTranslator(source='auto', target='en').translate(q)
     except:
@@ -56,17 +54,28 @@ def smart_ai(q):
 
     query = translated_query.lower()
 
-    # 2️⃣ Generate AI response
+    # Generate detailed paragraph-style response
     if "rice" in query:
-        ans = "Rice farming: prepare nursery, maintain water level, use nitrogen fertilizer and pest monitoring."
+        ans = ("Rice farming involves several important steps to ensure a healthy crop yield. "
+               "First, prepare the nursery and sow seeds carefully. Maintain proper water levels "
+               "throughout the growing season. Apply nitrogen fertilizers judiciously, and regularly "
+               "monitor for pests and diseases to take timely action.")
     elif "scheme" in query:
-        ans = "Schemes include PM-Kisan, PMFBY, KCC loan, Soil Health Card, irrigation subsidy."
+        ans = ("There are various government schemes available to support farmers. "
+               "PM-Kisan provides financial assistance, PMFBY offers crop insurance, Kisan Credit Card "
+               "enables low-interest loans, Soil Health Card helps monitor soil quality, "
+               "and irrigation subsidies support efficient water management.")
     elif "disease" in query:
-        ans = "Upload plant image in disease detection to get AI diagnosis and treatment steps."
+        ans = ("If your crops show signs of disease, you can use the AI-based disease detection "
+               "feature by uploading images of the affected plants. The system will diagnose "
+               "the issue and provide guidance on treatment measures, such as recommended pesticides, "
+               "sprays, or cultural practices to manage the disease effectively.")
     else:
-        ans = "Follow seasonal crop planning, soil testing, balanced fertilizer and pest monitoring."
+        ans = ("Farmers should follow seasonal crop planning, regularly test soil quality, "
+               "apply a balanced mix of fertilizers, and continuously monitor crops for pests "
+               "and diseases. Combining these practices ensures sustainable and productive farming.")
 
-    # 3️⃣ Translate AI response to user's language
+    # Translate AI response to user's language
     try:
         final_response = GoogleTranslator(source='en', target=user_lang_code).translate(ans)
     except:
@@ -87,9 +96,15 @@ def weather():
     data = requests.get(url).json()
 
     if "main" in data:
-        st.metric("Temperature",f"{data['main']['temp']} °C")
-        st.metric("Humidity",f"{data['main']['humidity']} %")
-        st.info(data['weather'][0]['description'])
+        temp = data['main']['temp']
+        humidity = data['main']['humidity']
+        desc = data['weather'][0]['description'].capitalize()
+
+        # Display as emphasized weather card
+        st.subheader(f"Current Weather in {city}")
+        st.write(f"**Temperature:** {temp} °C")
+        st.write(f"**Humidity:** {humidity} %")
+        st.write(f"**Condition:** {desc}")
 
 # ================= NEWS =================
 def news():
@@ -187,3 +202,4 @@ if not st.session_state.logged_in:
     login()
 else:
     main()
+
